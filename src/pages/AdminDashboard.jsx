@@ -1,32 +1,42 @@
 import Sidebar from "../components/dashboard/Sidebar";
 import StatsCard from "../components/dashboard/StatsCard";
 import SalesChart from "../components/dashboard/SalesChart";
-import Notifications from "../components/dashboard/Notifications";
 import TopHeader from "../components/dashboard/TopHeader";
+import ProductStatistic from "../components/dashboard/ProductStatistic";
+import Notifications from "../components/dashboard/Notifications";
 
 export default function AdminDashboard() {
   return (
-    <div className="flex">
+    <div className="flex min-h-screen bg-violet-50 ">
+      {/* Sidebar */}
       <Sidebar />
-        
-      <div className="flex-1 bg-gray-100 p-6">
-        <TopHeader title="Dashboard" />
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-          <StatsCard title="Total Sales" value="₹62,197" subtitle="+12%" />
-          <StatsCard title="Orders" value="1,240" subtitle="+8%" />
-          <StatsCard title="Delivered" value="1,120" subtitle="+10%" />
-          <StatsCard title="Pending" value="120" subtitle="-2%" />
-        </div>
 
-        {/* Main Content */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2">
+      {/* Main Area */}
+      <div className="flex-1 p-2 overflow-auto">
+        <TopHeader title="Sales Report" />
+
+        {/* MAIN FLEX */}
+        <div className="flex flex-col lg:flex-row gap-6">
+
+          {/* LEFT SECTION – 60% */}
+          <div className="w-full lg:w-[75%] space-y-6">
+
+            {/* Stats (still grid inside – best use case) */}
+            
+              <StatsCard />
+      
+
+            {/* Sales Chart */}
             <SalesChart />
           </div>
-          <Notifications />
-        </div>
 
+          {/* RIGHT SECTION – 40% */}
+          <div className="w-full lg:w-[30%] space-y-6 pr-2">
+            <ProductStatistic />
+            <Notifications />
+          </div>
+
+        </div>
       </div>
     </div>
   );
