@@ -1,0 +1,188 @@
+import { useState, useEffect } from "react";
+import { collection, query, where, getDocs, doc, deleteDoc } from "firebase/firestore";
+import { db } from "@/services/firebase";
+import { getStoreId } from "@/services/storeHelper";
+import DeliveryLayout from "../layouts/DeliveryLayout";
+import { Bell, Package, AlertTriangle, CheckCircle, Trash2, Truck, Clock } from "lucide-react";
+
+export default function DeliveryNotifications() {
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("all");
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const storeId = getStoreId();
+      const allNotifs = [];
+
+      const buildQ = (col) =>
+        storeId
+          ? query(collection(db, col), where("storeId", "==", storeId))
+          : collection(db, col);
+
+      // Fetch from notifications collection
+      const notifsQ = buildQ("notifications");
+      const notifsSnapshot = await getDocs(notifsQ);
+      notifsSnapshot.docs.forEach((d) => {
+        const data = d.data();
+        const time = data.createdAt?.toDate?.() || new Date();
+        allNotifs.push({
+          id: d.id,
+          text: data.message || data.type,
+          type: data.type || "info",
+          time,
+          timeStr: formatTime(time),
+          source: "notification",
+        });
+      });
+
+      // Delivery assignments
+      const ordersSnapshot = await getDocs(buildQ("orders"));
+      const deliveryAuth = JSON.parse(localStorage.getItem("deliveryAuth") || "{}");
+      const myName = deliveryAuth?.fullname || deliveryAuth?.name || "";
+
+      ordersSnapshot.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .filter((o) => o.assignedTo === myName || o.status === "ASSIGNED_TO_DELIVERY" || o.status === "OUT_FOR_DELIVERY")
+        .sort((a, b) => {
+          const dateA = a.assignedAt?.toDate?.() || a.createdAt?.toDate?.() || new Date(0);
+          const dateB = b.assignedAt?.toDate?.() || b.createdAt?.toDate?.() || new Date(0);
+          return dateB - dateA;
+        })
+        .slice(0, 15)
+        .forEach((order) => {
+          const time = order.assignedAt?.toDate?.() || order.createdAt?.toDate?.() || new Date();
+          allNotifs.push({
+            id: `delivery-${order.id}`,
+            text: `Delivery assigned — ${order.customerName || "Unknown"} (₹${order.totalAmount || 0})`,
+            type: order.status === "DELIVERED" ? "success" : "delivery",
+            time,
+            timeStr: formatTime(time),
+            source: "delivery",
+          });
+        });
+
+      allNotifs.sort((a, b) => b.time - a.time);
+      setNotifications(allNotifs);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatTime = (date) => {
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000);
+    if (diff < 60) return "Just now";
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  const handleDelete = async (notif) => {
+    if (notif.source !== "notification") return;
+    try {
+      await deleteDoc(doc(db, "notifications", notif.id));
+      setNotifications((prev) => prev.filter((n) => n.id !== notif.id));
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+    }
+  };
+
+  const getIcon = (type) => {
+    switch (type) {
+      case "delivery": return <Truck size={18} className="text-[#0a66c2]" />;
+      case "success": return <CheckCircle size={18} className="text-green-500" />;
+      case "warning": return <AlertTriangle size={18} className="text-[#f8726a]" />;
+      case "product_created": return <Package size={18} className="text-blue-500" />;
+      case "staff_added": return <CheckCircle size={18} className="text-purple-500" />;
+      default: return <Bell size={18} className="text-gray-400" />;
+    }
+  };
+
+  const filtered = filter === "all"
+    ? notifications
+    : notifications.filter((n) => {
+        if (filter === "deliveries") return n.source === "delivery";
+        if (filter === "system") return n.source === "notification";
+        return true;
+      });
+
+  if (loading) {
+    return (
+      <DeliveryLayout title="Notifications">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0a66c2]"></div>
+        </div>
+      </DeliveryLayout>
+    );
+  }
+
+  return (
+    <DeliveryLayout title="Notifications">
+      <div className="flex items-center gap-3 mb-6 flex-wrap">
+        {["all", "deliveries", "system"].map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors capitalize ${
+              filter === f
+                ? "bg-[#0a66c2] text-white shadow-lg shadow-[#0a66c2]/25"
+                : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+            }`}
+          >
+            {f}
+          </button>
+        ))}
+        <span className="text-sm text-gray-500 dark:text-gray-400 ml-auto">
+          {filtered.length} notification{filtered.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+        {filtered.length === 0 ? (
+          <div className="p-12 text-center">
+            <Bell size={48} className="mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+            <p className="text-gray-500 dark:text-gray-400 font-medium">No notifications</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">You're all caught up!</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+            {filtered.map((notif) => (
+              <div
+                key={notif.id}
+                className="flex items-start gap-4 px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  {getIcon(notif.type)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-900 dark:text-gray-100 font-medium">{notif.text}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-1">
+                    <Clock size={12} />
+                    {notif.timeStr}
+                  </p>
+                </div>
+                {notif.source === "notification" && (
+                  <button
+                    onClick={() => handleDelete(notif)}
+                    className="opacity-0 group-hover:opacity-100 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                    title="Delete"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </DeliveryLayout>
+  );
+}
