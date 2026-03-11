@@ -119,11 +119,17 @@ export default function Onboarding() {
       setStep(3);
     } catch (err) {
       if (err.code === "auth/email-already-in-use") {
-        setError("This email is already registered. Please use a different email or log in.");
+        setError("This email address is already associated with an existing account. If you previously created a store, please log in instead. To re-register with this email, the original account must be removed from Firebase Authentication first.");
       } else if (err.code === "auth/weak-password") {
-        setError("Password is too weak. Use at least 6 characters.");
+        setError("Your password doesn't meet security requirements. Please use at least 6 characters with a mix of letters and numbers.");
+      } else if (err.code === "auth/invalid-email") {
+        setError("The email address format is invalid. Please check and try again.");
+      } else if (err.code === "auth/network-request-failed") {
+        setError("Network error. Please check your internet connection and try again.");
+      } else if (err.code === "auth/too-many-requests") {
+        setError("Too many attempts. Please wait a few minutes before trying again.");
       } else {
-        setError("Failed to create account: " + err.message);
+        setError("Something went wrong while creating your account. Please try again or contact support.");
       }
     } finally {
       setLoading(false);

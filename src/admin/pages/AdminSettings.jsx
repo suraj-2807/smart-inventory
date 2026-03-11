@@ -63,7 +63,7 @@ export default function AdminSettings() {
   const [errors, setErrors] = useState({});
 
   const adminAuth = JSON.parse(localStorage.getItem("adminAuth") || "{}");
-  const userId = adminAuth?.id || "admin";
+  const [userDocId, setUserDocId] = useState(adminAuth?.id || "");
   const storeId = getStoreId();
 
   useEffect(() => {
@@ -75,16 +75,33 @@ export default function AdminSettings() {
     try {
       // Try to get by ID from adminAuth
       let userData = null;
+      let foundDocId = "";
       if (adminAuth?.id) {
         const userDoc = await getDoc(doc(db, "users", adminAuth.id));
-        if (userDoc.exists()) userData = userDoc.data();
+        if (userDoc.exists()) {
+          userData = userDoc.data();
+          foundDocId = adminAuth.id;
+        }
       }
 
       // Fallback: query by email
       if (!userData && adminAuth?.email) {
-        const q = query(collection(db, "users"), where("email", "==", adminAuth.email), where("username", "==", "admin"));
+        const q = query(collection(db, "users"), where("email", "==", adminAuth.email));
         const snap = await getDocs(q);
-        if (!snap.empty) userData = snap.docs[0].data();
+        if (!snap.empty) {
+          userData = snap.docs[0].data();
+          foundDocId = snap.docs[0].id;
+        }
+      }
+
+      if (foundDocId) {
+        setUserDocId(foundDocId);
+        // Also persist the doc ID in localStorage for future use
+        const auth = JSON.parse(localStorage.getItem("adminAuth") || "{}");
+        if (!auth.id) {
+          auth.id = foundDocId;
+          localStorage.setItem("adminAuth", JSON.stringify(auth));
+        }
       }
 
       if (userData) {
@@ -156,10 +173,14 @@ export default function AdminSettings() {
 
   const saveProfile = async () => {
     if (!validateProfile()) return;
+    if (!userDocId) {
+      showMsg("error", "User profile not found. Please re-login and try again.");
+      return;
+    }
     setSaving(true);
     const profileUrl = await uploadImageToCloudinary();
     try {
-      await updateDoc(doc(db, "users", userId), {
+      await updateDoc(doc(db, "users", userDocId), {
         fullname: fullName, businessname: businessName, role,
         email, phone, username, address1, address2, profile_url: profileUrl
       });
@@ -167,6 +188,7 @@ export default function AdminSettings() {
       const auth = JSON.parse(localStorage.getItem("adminAuth") || "{}");
       auth.fullname = fullName;
       auth.email = email;
+      auth.id = userDocId;
       localStorage.setItem("adminAuth", JSON.stringify(auth));
       showMsg("success", "Profile updated successfully!");
       fetchUserData();
@@ -189,14 +211,19 @@ export default function AdminSettings() {
 
     setSaving(true);
     try {
+      if (!userDocId) {
+        showMsg("error", "User profile not found. Please re-login and try again.");
+        setSaving(false);
+        return;
+      }
       // Verify current password
-      const userDoc = await getDoc(doc(db, "users", userId));
+      const userDoc = await getDoc(doc(db, "users", userDocId));
       if (userDoc.exists() && userDoc.data().password !== currentPassword) {
         showMsg("error", "Current password is incorrect");
         setSaving(false);
         return;
       }
-      await updateDoc(doc(db, "users", userId), { password: newPassword });
+      await updateDoc(doc(db, "users", userDocId), { password: newPassword });
       showMsg("success", "Password changed successfully!");
       setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
     } catch (error) {
@@ -313,27 +340,28 @@ export default function AdminSettings() {
   const fetchStoreData = async () => {
     try {
       if (!storeId) return;
-      const storesQ = query(collection(db, "stores"), where("storeId", "==", storeId));
-      const snap = await getDocs(storesQ);
-      if (!snap.empty) {
-        const s = snap.docs[0].data();
-        setStoreDocId(snap.docs[0].id);
+      // The storeId IS the document ID (set during onboarding via addDoc)
+      const storeDoc = await getDoc(doc(db, "stores", storeId));
+      if (storeDoc.exists()) {
+        const s = storeDoc.data();
+        setStoreDocId(storeDoc.id);
         setStoreName(s.storeName || s.name || "");
-        setStoreAddress(s.address || "");
-        setStorePhone(s.phone || "");
-        setStoreEmail(s.email || "");
-        setStoreGST(s.gst || s.gstNumber || "");
+        setStoreAddress(s.storeAddress || s.address || "");
+        setStorePhone(s.storePhone || s.phone || "");
+        setStoreEmail(s.storeEmail || s.email || "");
+        setStoreGST(s.gstNumber || s.gst || "");
       } else {
-        // Fallback: check users collection for store info
-        if (adminAuth?.id) {
-          const userDoc = await getDoc(doc(db, "users", adminAuth.id));
-          if (userDoc.exists()) {
-            const u = userDoc.data();
-            setStoreName(u.storeName || u.businessname || "");
-            setStoreAddress(u.address1 || "");
-            setStorePhone(u.phone || "");
-            setStoreEmail(u.email || "");
-          }
+        // Fallback: query stores collection
+        const storesQ = query(collection(db, "stores"), where("ownerEmail", "==", adminAuth?.email));
+        const snap = await getDocs(storesQ);
+        if (!snap.empty) {
+          const s = snap.docs[0].data();
+          setStoreDocId(snap.docs[0].id);
+          setStoreName(s.storeName || s.name || "");
+          setStoreAddress(s.storeAddress || s.address || "");
+          setStorePhone(s.storePhone || s.phone || "");
+          setStoreEmail(s.storeEmail || s.email || "");
+          setStoreGST(s.gstNumber || s.gst || "");
         }
       }
     } catch (error) {
@@ -350,11 +378,12 @@ export default function AdminSettings() {
 
     setSaving(true);
     try {
-      const storeData = { storeName, address: storeAddress, phone: storePhone, email: storeEmail, gst: storeGST, storeId };
+      const storeData = { storeName, storeAddress, storePhone, storeEmail, gstNumber: storeGST };
       if (storeDocId) {
         await updateDoc(doc(db, "stores", storeDocId), storeData);
       } else {
-        await addDoc(collection(db, "stores"), { ...storeData, createdAt: serverTimestamp() });
+        const newDoc = await addDoc(collection(db, "stores"), { ...storeData, createdAt: serverTimestamp() });
+        setStoreDocId(newDoc.id);
       }
       // Update localStorage
       const auth = JSON.parse(localStorage.getItem("adminAuth") || "{}");
@@ -390,7 +419,12 @@ export default function AdminSettings() {
     setClearingData(true);
     try {
       // Verify admin password
-      const userDoc = await getDoc(doc(db, "users", userId));
+      if (!userDocId) {
+        showMsg("error", "User profile not found.");
+        setClearingData(false);
+        return;
+      }
+      const userDoc = await getDoc(doc(db, "users", userDocId));
       if (!userDoc.exists() || userDoc.data().password !== clearAuthCode) {
         showMsg("error", "Incorrect password. Please try again.");
         setClearingData(false);
