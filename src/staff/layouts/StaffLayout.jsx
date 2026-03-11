@@ -13,6 +13,7 @@ import {
 import NotificationBell from "../components/NotificationBell";
 import ProfileDropdown from "../components/ProfileDropdown";
 import { getStoreName } from "@/services/storeHelper";
+import favicon from "../../assets/favicon.png";
 
 export default function StaffLayout({ children, title }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -59,7 +60,7 @@ export default function StaffLayout({ children, title }) {
           <div className="p-6 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <img src="/src/assets/favicon.png" alt="Selloship" className="w-10 h-10 rounded-lg" />
+                <img src={favicon} alt="Selloship" className="w-10 h-10 rounded-lg" />
                 <div>
                   <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                     Selloship

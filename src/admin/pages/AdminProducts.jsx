@@ -140,6 +140,25 @@ export default function AdminProducts() {
     reader.readAsText(file);
   };
 
+  // Upload image URL to Cloudinary
+  const uploadImageUrlToCloudinary = async (imageUrl) => {
+    if (!imageUrl || !imageUrl.startsWith("http")) return "";
+    try {
+      const formData = new FormData();
+      formData.append("file", imageUrl);
+      formData.append("upload_preset", "unsigned_upload");
+      const res = await fetch(
+        "https://api.cloudinary.com/v1_1/dchjlxn8m/image/upload",
+        { method: "POST", body: formData }
+      );
+      const data = await res.json();
+      return data.secure_url || "";
+    } catch (err) {
+      console.warn("Cloudinary upload failed for:", imageUrl, err);
+      return "";
+    }
+  };
+
   // Bulk import products
   const handleBulkImport = async () => {
     if (importData.length === 0) return;
@@ -147,13 +166,15 @@ export default function AdminProducts() {
     try {
       const storeId = getStoreId();
       for (const item of importData) {
+        // Upload image URL to Cloudinary if present
+        const cloudinaryUrl = item.image ? await uploadImageUrlToCloudinary(item.image) : '';
         await addDoc(collection(db, 'products'), {
           name: item.name,
           price: item.price,
           stock: item.stock,
           category: item.category,
           unit: item.unit,
-          imageUrl: item.image || '',
+          imageUrl: cloudinaryUrl,
           isActive: true,
           storeId: storeId || '',
           createdAt: serverTimestamp(),
@@ -287,7 +308,7 @@ export default function AdminProducts() {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-visible relative">
           <table className="w-full">
             <thead className="bg-gray-50 border-b dark:bg-gray-800 dark:border-b-0">
               <tr>

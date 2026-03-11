@@ -14,6 +14,7 @@ import {
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getStoreName } from "@/services/storeHelper";
+import favicon from "../../../assets/favicon.png";
 
 export default function Sidebar() {
   const { pathname } = useLocation();
@@ -52,7 +53,7 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="px-6 py-6">
         <div className="flex items-center gap-2">
-          <img src="/src/assets/favicon.png" alt="Selloship" className="w-8 h-8 rounded-lg" />
+          <img src={favicon} alt="Selloship" className="w-8 h-8 rounded-lg" />
           <div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">
               Selloship

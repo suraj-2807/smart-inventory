@@ -4,6 +4,8 @@ import {
   Package, Truck, Shield, BarChart3, Users, ArrowRight, Zap, ChevronRight,
   Box, ClipboardList, ShoppingBag, Star, CheckCircle, Globe, LogIn, Download, FileSpreadsheet
 } from "lucide-react";
+import favicon from "../../assets/favicon.png";
+import selloshipLogo from "../../assets/SELLOSHIP-landscap-white-blue.png";
 
 export default function Landing() {
   const [scrollY, setScrollY] = useState(0);
@@ -34,7 +36,7 @@ export default function Landing() {
       }`}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src="/src/assets/favicon.png" alt="Selloship" className="w-9 h-9 rounded-lg" />
+            <img src={favicon} alt="Selloship" className="w-9 h-9 rounded-lg" />
             <span className={`text-xl font-bold ${scrollY > 50 ? "text-gray-900" : "text-white"}`}>
               Selloship
             </span>
@@ -438,7 +440,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-2">
-              <img src="/src/assets/SELLOSHIP-landscap-white-blue.png" alt="Selloship" className="h-8" />
+              <img src={selloshipLogo} alt="Selloship" className="h-8" />
             </div>
             <div className="flex gap-8 text-sm text-white/50">
               <a href="https://selloship.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">selloship.com</a>

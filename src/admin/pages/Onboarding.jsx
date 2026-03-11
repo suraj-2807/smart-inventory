@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
@@ -37,6 +37,29 @@ export default function Onboarding() {
   // Step 3 — Email verification
   const [verifying, setVerifying] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [autoChecking, setAutoChecking] = useState(false);
+
+  // Auto-poll for email verification when on step 3
+  useEffect(() => {
+    if (step !== 3) return;
+    setAutoChecking(true);
+    const interval = setInterval(async () => {
+      try {
+        await auth.currentUser?.reload();
+        if (auth.currentUser?.emailVerified) {
+          clearInterval(interval);
+          setAutoChecking(false);
+          setStep(4);
+        }
+      } catch (err) {
+        // silently retry
+      }
+    }, 3000);
+    return () => {
+      clearInterval(interval);
+      setAutoChecking(false);
+    };
+  }, [step]);
 
   // Step 4 — Product import
   const [importMode, setImportMode] = useState(null); // "csv" | "skip"
@@ -219,6 +242,25 @@ export default function Onboarding() {
     URL.revokeObjectURL(url);
   };
 
+  // Upload image URL to Cloudinary
+  const uploadImageUrlToCloudinary = async (imageUrl) => {
+    if (!imageUrl || !imageUrl.startsWith("http")) return "";
+    try {
+      const formData = new FormData();
+      formData.append("file", imageUrl);
+      formData.append("upload_preset", "unsigned_upload");
+      const res = await fetch(
+        "https://api.cloudinary.com/v1_1/dchjlxn8m/image/upload",
+        { method: "POST", body: formData }
+      );
+      const data = await res.json();
+      return data.secure_url || "";
+    } catch (err) {
+      console.warn("Cloudinary upload failed for:", imageUrl, err);
+      return "";
+    }
+  };
+
   const handleSubmit = async () => {
     setError("");
     setLoading(true);
@@ -256,12 +298,20 @@ export default function Onboarding() {
 
       // 3. Bulk import products if any
       if (csvProducts.length > 0) {
-        const batch = csvProducts.map(p =>
+        // Upload image URLs to Cloudinary first
+        const productsWithCloudinaryImages = await Promise.all(
+          csvProducts.map(async (p) => {
+            const cloudinaryUrl = p.image ? await uploadImageUrlToCloudinary(p.image) : "";
+            return { ...p, cloudinaryImage: cloudinaryUrl };
+          })
+        );
+
+        const batch = productsWithCloudinaryImages.map(p =>
           addDoc(collection(db, "products"), {
             ...p,
             price: Number(p.price),
             stock: Number(p.stock),
-            imageUrl: p.image || "",
+            imageUrl: p.cloudinaryImage || "",
             storeId,
             isActive: true,
             createdAt: serverTimestamp(),
@@ -539,15 +589,21 @@ export default function Onboarding() {
 
                 <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
                   <p className="text-sm text-blue-800">
-                    Click the link in your email to verify your account, then come back here and click <strong>"I've Verified"</strong> to continue.
+                    Click the link in your email to verify your account. We'll <strong>automatically detect</strong> when you've verified.
                   </p>
+                </div>
+
+                {/* Auto-checking indicator */}
+                <div className="flex items-center justify-center gap-3 py-3">
+                  <div className="w-5 h-5 border-2 border-[#0a66c2] border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-sm text-[#0a66c2] font-medium">Waiting for verification...</span>
                 </div>
 
                 <div className="space-y-3">
                   <button onClick={checkVerification} disabled={verifying}
-                    className="w-full py-3 bg-[#0a66c2] text-white rounded-xl font-semibold hover:bg-[#084d94] transition-all flex items-center justify-center gap-2 disabled:opacity-50">
-                    {verifying ? <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Checking...</>
-                    : <><ShieldCheck size={18} /> I've Verified My Email</>}
+                    className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                    {verifying ? <><div className="w-5 h-5 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></div> Checking...</>
+                    : <><ShieldCheck size={18} /> Check Manually</>}
                   </button>
 
                   <button onClick={resendVerification}
