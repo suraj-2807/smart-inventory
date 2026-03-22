@@ -64,7 +64,7 @@ export default function ProductStatistic() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-3xl shadow-sm p-6">
+      <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-sm p-6">
         <div className="flex items-center justify-center h-64">
           <div className="w-8 h-8 border-4 border-[#0a66c2] border-t-transparent rounded-full animate-spin"></div>
         </div>
@@ -176,10 +176,10 @@ export default function ProductStatistic() {
 
         {/* Best Seller */}
         {topProduct && (
-          <div className="mt-4 p-3 rounded-xl flex items-center gap-2 border-2 bg-blue-50 dark:from-gray-800 dark:to-gray-700 border-blue-200 dark:border-gray-600">
-            <TrendingUp className="w-5 h-5 text-[#0a66c2]" />
+          <div className="mt-4 p-3 rounded-xl flex items-center gap-2 border-2 bg-blue-50 dark:bg-gray-800 border-blue-200 dark:border-gray-600">
+            <TrendingUp className="w-5 h-5 text-[#0a66c2] dark:text-blue-400" />
             <div>
-              <p className="text-xs text-[#0a66c2] font-medium">
+              <p className="text-xs text-[#0a66c2] dark:text-blue-400 font-medium">
                 Best Seller
               </p>
               <p className="text-sm font-bold text-gray-900 dark:text-white">
