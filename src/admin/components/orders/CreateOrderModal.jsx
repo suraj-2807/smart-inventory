@@ -9,6 +9,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/services/firebase";
 import { getStoreId } from "@/services/storeHelper";
+import { sendOrderNotification } from "@/services/notificationService";
 import { X, Plus, Trash2, Upload, Check, ShoppingCart, User, MapPin, Mail } from "lucide-react";
 
 export default function CreateOrderModal({ onClose, onSuccess }) {
@@ -122,7 +123,7 @@ export default function CreateOrderModal({ onClose, onSuccess }) {
 
     const paymentUrl = await uploadPaymentScreenshot();
 
-    await addDoc(collection(db, "orders"), {
+    const orderDoc = await addDoc(collection(db, "orders"), {
       customerName,
       customerEmail,
       customerPhone,
@@ -141,6 +142,16 @@ export default function CreateOrderModal({ onClose, onSuccess }) {
       status: paymentUrl ? "PAID" : "NEW",
       storeId: getStoreId() || "",
       createdAt: serverTimestamp()
+    });
+
+    // Send order confirmation email to customer
+    sendOrderNotification("ORDER_CREATED", {
+      customerName,
+      customerEmail,
+      customerPhone,
+      items: orderItems,
+      totalAmount,
+      orderNumber: orderDoc.id.substring(0, 8).toUpperCase(),
     });
 
     onSuccess();

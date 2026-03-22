@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { collection, query, where, getDocs, doc, updateDoc, writeBatch, Timestamp } from "firebase/firestore";
 import { db } from "../../services/firebase";
 import { getStoreId } from "@/services/storeHelper";
+import { sendOrderNotification } from "@/services/notificationService";
 import StaffLayout from "../layouts/StaffLayout";
 import { Package, CheckCircle, AlertTriangle, Box, Truck, User } from "lucide-react";
 
@@ -152,6 +153,16 @@ export default function StaffOrders() {
 
       await batch.commit();
 
+      // Send packed notification email
+      sendOrderNotification("ORDER_PACKED", {
+        customerName: order.customerName,
+        customerEmail: order.customerEmail,
+        customerPhone: order.customerPhone,
+        items: order.items,
+        totalAmount: order.totalAmount || order.items?.reduce((s, i) => s + i.price * i.quantity, 0),
+        orderNumber: order.id.substring(0, 8).toUpperCase(),
+      });
+
       alert(`✅ Order packed successfully!\n\nOrder is now ready for delivery assignment.`);
       fetchData(); // Refresh data
       setShowPackModal(false);
@@ -184,6 +195,17 @@ export default function StaffOrders() {
         assignedAt: new Date(),
         assignedDate: new Date().toISOString().split('T')[0],
         assignedBy: "Warehouse Staff"
+      });
+
+      // Send assigned to delivery notification email
+      sendOrderNotification("ASSIGNED_TO_DELIVERY", {
+        customerName: selectedOrder.customerName,
+        customerEmail: selectedOrder.customerEmail,
+        customerPhone: selectedOrder.customerPhone,
+        items: selectedOrder.items,
+        totalAmount: selectedOrder.totalAmount || selectedOrder.items?.reduce((s, i) => s + i.price * i.quantity, 0),
+        orderNumber: selectedOrder.id.substring(0, 8).toUpperCase(),
+        assignedTo: partner.name,
       });
 
       alert(`✅ Order assigned to ${partner.name}\n\nThe delivery partner will be notified.`);

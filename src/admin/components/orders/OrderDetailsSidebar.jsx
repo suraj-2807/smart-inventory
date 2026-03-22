@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { X, MapPin, Phone, Mail, Package, Clock, ChevronDown, ChevronUp, Download, Send, ExternalLink, Check, FileText, Truck, PlayCircle, CheckCircle } from "lucide-react";
+import { X, MapPin, Phone, Mail, Package, Clock, ChevronDown, ChevronUp, Download, Send, ExternalLink, Check, FileText, Truck, PlayCircle, CheckCircle, AlertCircle } from "lucide-react";
+import { sendInvoiceEmail } from "@/services/notificationService";
 
 // Order Details Sidebar Component
 export default function OrderDetailsSidebar({ order, onClose, onStatusUpdate, onDownload, getStatusColor, getStatusDisplay }) {
   const [expandCustomer, setExpandCustomer] = useState(true);
   const [expandTimeline, setExpandTimeline] = useState(true);
+  const [sendingInvoice, setSendingInvoice] = useState(false);
+  const [invoiceMsg, setInvoiceMsg] = useState({ type: "", text: "" });
 
   if (!order) return null;
 
@@ -386,11 +389,57 @@ export default function OrderDetailsSidebar({ order, onClose, onStatusUpdate, on
             <Download size={18} />
             Download
           </button>
-          <button className="flex-1 px-4 py-2.5 bg-[#0a66c2] text-white rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
-            <Send size={18} />
-            Send Invoice
+          <button
+            disabled={sendingInvoice || !order.customerEmail}
+            onClick={async () => {
+              setSendingInvoice(true);
+              setInvoiceMsg({ type: "", text: "" });
+              const result = await sendInvoiceEmail({
+                customerName: order.customerName,
+                customerEmail: order.customerEmail,
+                customerPhone: order.customerPhone,
+                items: order.items,
+                totalAmount: order.totalAmount || order.items?.reduce((s, i) => s + i.price * i.quantity, 0),
+                orderNumber: order.orderNumber,
+              });
+              setSendingInvoice(false);
+              if (result.success) {
+                setInvoiceMsg({ type: "success", text: "Invoice sent to " + order.customerEmail });
+              } else if (result.reason === "no_email") {
+                setInvoiceMsg({ type: "error", text: "No customer email on this order" });
+              } else if (result.reason === "not_configured") {
+                setInvoiceMsg({ type: "error", text: "EmailJS not configured yet — check notificationService.js" });
+              } else {
+                setInvoiceMsg({ type: "error", text: "Failed to send invoice email" });
+              }
+              setTimeout(() => setInvoiceMsg({ type: "", text: "" }), 4000);
+            }}
+            className="flex-1 px-4 py-2.5 bg-[#0a66c2] text-white rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {sendingInvoice ? (
+              <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Sending...</>
+            ) : (
+              <><Send size={18} /> Send Invoice</>
+            )}
           </button>
         </div>
+
+        {/* Invoice status message */}
+        {invoiceMsg.text && (
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+            invoiceMsg.type === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
+          }`}>
+            {invoiceMsg.type === "success" ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
+            {invoiceMsg.text}
+          </div>
+        )}
+
+        {!order.customerEmail && (
+          <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+            <AlertCircle size={14} />
+            No email address on this order — invoice cannot be sent
+          </div>
+        )}
 
         {/* Current Status Info */}
         <div className="bg-white border border-gray-200 rounded-lg p-3">

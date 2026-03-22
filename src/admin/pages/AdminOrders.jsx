@@ -5,6 +5,7 @@ import { getStoreId } from "@/services/storeHelper";
 import AdminLayout from "../layouts/AdminLayout";
 import CreateOrderModal from "../components/orders/CreateOrderModal";
 import OrderDetailsSidebar from "../components/orders/OrderDetailsSidebar";
+import { sendOrderNotification } from "@/services/notificationService";
 import { Download, Send, ExternalLink, CheckCircle, FileText, PlayCircle, Truck, Package, Calendar, X } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -105,6 +106,20 @@ export default function AdminOrders() {
         orderConfirmed: true,
         confirmedAt: new Date()
       });
+
+      // Send order confirmed email
+      const order = orders.find(o => o.id === orderId);
+      if (order) {
+        sendOrderNotification("ORDER_CONFIRMED", {
+          customerName: order.customerName,
+          customerEmail: order.customerEmail,
+          customerPhone: order.customerPhone,
+          items: order.items,
+          totalAmount: order.totalAmount || order.items?.reduce((s, i) => s + i.price * i.quantity, 0),
+          orderNumber: orderId.substring(0, 8).toUpperCase(),
+        });
+      }
+
       fetchOrders();
     }
   };

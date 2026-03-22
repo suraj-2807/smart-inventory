@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { collection, query, where, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "../../services/firebase";
 import { getStoreId } from "@/services/storeHelper";
+import { sendOrderNotification } from "@/services/notificationService";
 import DeliveryLayout from "../layouts/DeliveryLayout";
 import { Truck, CheckCircle, Package, Phone, MapPin, User, Clock } from "lucide-react";
 
@@ -45,6 +46,20 @@ export default function DeliveryOrders() {
         status: "OUT_FOR_DELIVERY",
         outForDeliveryAt: new Date(),
       });
+
+      // Send out for delivery notification email
+      const order = orders.find(o => o.id === orderId);
+      if (order) {
+        sendOrderNotification("OUT_FOR_DELIVERY", {
+          customerName: order.customerName,
+          customerEmail: order.customerEmail,
+          customerPhone: order.customerPhone,
+          items: order.items,
+          totalAmount: order.totalAmount || order.items?.reduce((s, i) => s + i.price * i.quantity, 0),
+          orderNumber: orderId.substring(0, 8).toUpperCase(),
+        });
+      }
+
       alert("✅ Order marked as Out for Delivery!");
       fetchOrders();
     } catch (error) {
@@ -64,6 +79,20 @@ export default function DeliveryOrders() {
         status: "DELIVERED",
         deliveredAt: new Date(),
       });
+
+      // Send delivered notification email
+      const order = orders.find(o => o.id === orderId);
+      if (order) {
+        sendOrderNotification("DELIVERED", {
+          customerName: order.customerName,
+          customerEmail: order.customerEmail,
+          customerPhone: order.customerPhone,
+          items: order.items,
+          totalAmount: order.totalAmount || order.items?.reduce((s, i) => s + i.price * i.quantity, 0),
+          orderNumber: orderId.substring(0, 8).toUpperCase(),
+        });
+      }
+
       alert("✅ Order delivered successfully!");
       fetchOrders();
     } catch (error) {
