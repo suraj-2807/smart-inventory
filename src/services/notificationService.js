@@ -167,7 +167,8 @@ export const sendOrderNotification = async (type, orderData) => {
     return { success: true, result };
   } catch (error) {
     console.error(`❌ Failed to send email (${type}):`, error);
-    return { success: false, error };
+    const errMsg = error?.text || error?.message || JSON.stringify(error);
+    return { success: false, error, errorMessage: errMsg };
   }
 };
 
@@ -216,7 +217,8 @@ export const sendInvoiceEmail = async (orderData) => {
     return { success: true, result };
   } catch (error) {
     console.error("❌ Failed to send invoice email:", error);
-    return { success: false, error };
+    const errMsg = error?.text || error?.message || JSON.stringify(error);
+    return { success: false, error, errorMessage: errMsg };
   }
 };
 

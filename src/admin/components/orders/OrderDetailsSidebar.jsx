@@ -410,7 +410,7 @@ export default function OrderDetailsSidebar({ order, onClose, onStatusUpdate, on
               } else if (result.reason === "not_configured") {
                 setInvoiceMsg({ type: "error", text: "EmailJS not configured yet — check notificationService.js" });
               } else {
-                setInvoiceMsg({ type: "error", text: "Failed to send invoice email" });
+                setInvoiceMsg({ type: "error", text: result.errorMessage || "Failed to send invoice email" });
               }
               setTimeout(() => setInvoiceMsg({ type: "", text: "" }), 4000);
             }}
