@@ -25,7 +25,7 @@ export default function AdminProducts() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [importData, setImportData] = useState([]);
   const [importLoading, setImportLoading] = useState(false);
-  
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -266,7 +266,7 @@ export default function AdminProducts() {
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-200">
                 <span>Showing</span>
-                <select 
+                <select
                   value={itemsPerPage}
                   onChange={(e) => {
                     setItemsPerPage(Number(e.target.value));
@@ -280,14 +280,14 @@ export default function AdminProducts() {
                   <option value={50}>50</option>
                 </select>
               </div>
-              <button 
+              <button
                 onClick={handleExport}
                 className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50"
               >
                 <Upload size={18} />
                 Export
               </button>
-              <button 
+              <button
                 onClick={() => setShowImportModal(true)}
                 className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 text-green-600 border-green-300 hover:bg-green-50"
               >
@@ -308,7 +308,7 @@ export default function AdminProducts() {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto overflow-y-visible relative">
+        <div className="overflow-x-visible overflow-y-visible relative">
           <table className="w-full">
             <thead className="bg-gray-50 border-b dark:bg-gray-800 dark:border-b-0">
               <tr>
@@ -387,11 +387,11 @@ export default function AdminProducts() {
                       >
                         <MoreVertical size={20} />
                       </button>
-                      
+
                       {showDropdown === index && (
                         <>
-                          <div 
-                            className="fixed inset-0 z-10" 
+                          <div
+                            className="fixed inset-0 z-10"
                             onClick={() => setShowDropdown(null)}
                           />
                           <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-20">
@@ -426,14 +426,13 @@ export default function AdminProducts() {
 
         {/* Pagination */}
         <div className="px-6 py-4 border-t flex items-center justify-between">
-          <button 
+          <button
             onClick={goToPrevious}
             disabled={currentPage === 1}
-            className={`flex items-center gap-2 px-4 py-2 text-sm rounded ${
-              currentPage === 1 
-                ? 'text-gray-400 cursor-not-allowed' 
+            className={`flex items-center gap-2 px-4 py-2 text-sm rounded ${currentPage === 1
+                ? 'text-gray-400 cursor-not-allowed'
                 : 'text-gray-600 hover:bg-gray-50'
-            }`}
+              }`}
           >
             ← Previous
           </button>
@@ -445,25 +444,23 @@ export default function AdminProducts() {
                 <button
                   key={page}
                   onClick={() => goToPage(page)}
-                  className={`px-3 py-1 text-sm rounded ${
-                    currentPage === page
+                  className={`px-3 py-1 text-sm rounded ${currentPage === page
                       ? 'bg-blue-600 text-white'
                       : 'hover:bg-gray-100 text-gray-700'
-                  }`}
+                    }`}
                 >
                   {String(page).padStart(2, '0')}
                 </button>
               )
             ))}
           </div>
-          <button 
+          <button
             onClick={goToNext}
             disabled={currentPage === totalPages}
-            className={`flex items-center gap-2 px-4 py-2 text-sm rounded ${
-              currentPage === totalPages 
-                ? 'text-gray-400 cursor-not-allowed' 
+            className={`flex items-center gap-2 px-4 py-2 text-sm rounded ${currentPage === totalPages
+                ? 'text-gray-400 cursor-not-allowed'
                 : 'text-gray-600 hover:bg-gray-50'
-            }`}
+              }`}
           >
             Next →
           </button>
@@ -550,7 +547,7 @@ export default function AdminProducts() {
                               <td className="px-3 py-2 dark:text-gray-200">{row.stock}</td>
                               <td className="px-3 py-2 dark:text-gray-200">{row.category}</td>
                               <td className="px-3 py-2 dark:text-gray-200">{row.unit}</td>
-                              <td className="px-3 py-2">{row.image ? <img src={row.image} alt="" className="w-7 h-7 rounded object-cover" onError={(e) => { e.target.style.display='none'; }} /> : <span className="text-gray-400">—</span>}</td>
+                              <td className="px-3 py-2">{row.image ? <img src={row.image} alt="" className="w-7 h-7 rounded object-cover" onError={(e) => { e.target.style.display = 'none'; }} /> : <span className="text-gray-400">—</span>}</td>
                             </tr>
                           ))}
                         </tbody>

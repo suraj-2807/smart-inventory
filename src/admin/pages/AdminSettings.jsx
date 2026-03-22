@@ -339,7 +339,10 @@ export default function AdminSettings() {
   // Fetch store data
   const fetchStoreData = async () => {
     try {
-      if (!storeId) return;
+      if (!storeId) {
+        console.warn("No storeId found, cannot fetch store data");
+        return;
+      }
       // The storeId IS the document ID (set during onboarding via addDoc)
       const storeDoc = await getDoc(doc(db, "stores", storeId));
       if (storeDoc.exists()) {
@@ -349,9 +352,11 @@ export default function AdminSettings() {
         setStoreAddress(s.storeAddress || s.address || "");
         setStorePhone(s.storePhone || s.phone || "");
         setStoreEmail(s.storeEmail || s.email || "");
-        setStoreGST(s.gstNumber || s.gst || "");
+        setStoreGST(s.gstNumber || "");
+        console.log("✅ Store data loaded, GST:", s.gstNumber || "(empty)");
       } else {
-        // Fallback: query stores collection
+        // Fallback: query stores collection by ownerEmail or storeId field
+        console.warn("Store doc not found by ID, trying fallback query...");
         const storesQ = query(collection(db, "stores"), where("ownerEmail", "==", adminAuth?.email));
         const snap = await getDocs(storesQ);
         if (!snap.empty) {
@@ -361,7 +366,10 @@ export default function AdminSettings() {
           setStoreAddress(s.storeAddress || s.address || "");
           setStorePhone(s.storePhone || s.phone || "");
           setStoreEmail(s.storeEmail || s.email || "");
-          setStoreGST(s.gstNumber || s.gst || "");
+          setStoreGST(s.gstNumber || "");
+          console.log("✅ Store data loaded via fallback, GST:", s.gstNumber || "(empty)");
+        } else {
+          console.warn("No store document found at all.");
         }
       }
     } catch (error) {
@@ -379,11 +387,23 @@ export default function AdminSettings() {
     setSaving(true);
     try {
       const storeData = { storeName, storeAddress, storePhone, storeEmail, gstNumber: storeGST };
+      console.log("Saving store data:", storeData, "storeDocId:", storeDocId);
       if (storeDocId) {
         await updateDoc(doc(db, "stores", storeDocId), storeData);
       } else {
-        const newDoc = await addDoc(collection(db, "stores"), { ...storeData, createdAt: serverTimestamp() });
+        // Include storeId and ownerEmail so the doc can be found later
+        const newDoc = await addDoc(collection(db, "stores"), {
+          ...storeData,
+          ownerEmail: adminAuth?.email || "",
+          createdAt: serverTimestamp()
+        });
         setStoreDocId(newDoc.id);
+        // Also update localStorage storeId if not set
+        const auth = JSON.parse(localStorage.getItem("adminAuth") || "{}");
+        if (!auth.storeId) {
+          auth.storeId = newDoc.id;
+          localStorage.setItem("adminAuth", JSON.stringify(auth));
+        }
       }
       // Update localStorage
       const auth = JSON.parse(localStorage.getItem("adminAuth") || "{}");
@@ -391,7 +411,9 @@ export default function AdminSettings() {
       localStorage.setItem("adminAuth", JSON.stringify(auth));
       localStorage.setItem("storeName", storeName);
       showMsg("success", "Store details updated!");
+      console.log("✅ Store details saved, GST:", storeGST);
     } catch (error) {
+      console.error("Error saving store details:", error);
       showMsg("error", "Error saving store details: " + error.message);
     } finally {
       setSaving(false);
